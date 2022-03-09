@@ -18,7 +18,8 @@ class StorageRepository(private val context: Context) {
         val projection = arrayOf(
             MediaStore.MediaColumns.DATA, MediaStore.Images.Media.BUCKET_DISPLAY_NAME
         )
-        val imageCursor = context.contentResolver.query(uri, projection, null, null)
+        val orderBy = MediaStore.Images.Media.DATE_MODIFIED + " DESC";
+        val imageCursor = context.contentResolver.query(uri, projection, null, null, orderBy)
         imageCursor?.let { cursor ->
             val temp = arrayListOf<DirectoryModel>()
             while (cursor.moveToNext()) {
@@ -52,8 +53,9 @@ class StorageRepository(private val context: Context) {
         val projection = arrayOf(
             MediaStore.MediaColumns.DATA, MediaStore.Video.Media.BUCKET_DISPLAY_NAME
         )
-        val imageCursor = context.contentResolver.query(uri, projection, null, null)
-        imageCursor?.let { cursor ->
+        val orderBy = MediaStore.Video.Media.DATE_MODIFIED+ " DESC";
+        val videoCursor = context.contentResolver.query(uri, projection, null, null, orderBy)
+        videoCursor?.let { cursor ->
             val temp = arrayListOf<DirectoryModel>()
             while (cursor.moveToNext()) {
                 val columnData = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)

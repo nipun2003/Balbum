@@ -1,26 +1,31 @@
 package com.nipunapps.balbum.screen
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowCrossAxisAlignment
 import com.google.accompanist.flowlayout.FlowRow
 import com.google.accompanist.flowlayout.MainAxisAlignment
 import com.google.accompanist.glide.rememberGlidePainter
+import com.nipunapps.balbum.R
 import com.nipunapps.balbum.models.DirectoryModel
 import com.nipunapps.balbum.ui.theme.*
 import com.nipunapps.balbum.viewmodel.HomeViewModel
@@ -39,7 +44,9 @@ fun HomeScreen(
             HomeTopBar(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(IntrinsicSize.Min)
+                    .fillMaxHeight(
+                        maxOf(ToolbarMinSize, ToolbarMaxSize - scrollState.value / 1200f * 0.6f)
+                    )
                     .padding(horizontal = BigSpacing)
             )
         }
@@ -118,12 +125,47 @@ fun HomeTopBar(
         modifier = modifier
     ) {
         Spacer(modifier = Modifier.size(PaddingStatusBar))
-        Text(
-            text = "Albums",
-            style = MaterialTheme.typography.h1,
-            fontWeight = FontWeight.Medium
-        )
-        Spacer(modifier = Modifier.size(SmallSpacing))
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            Text(
+                text = "Albums",
+                style = MaterialTheme.typography.h1,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+            )
+
+            Row(
+                modifier = Modifier
+                    .padding(
+                        bottom = ExtraSmallSpacing,
+                        end = ExtraSmallSpacing
+                    )
+                    .align(Alignment.BottomEnd),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_add),
+                    contentDescription = "New Folder",
+                    modifier = Modifier
+                        .size(IconSize)
+                        .padding(ExtraSmallSpacing),
+                    tint = MaterialTheme.colors.onBackground
+                )
+                Spacer(modifier = Modifier.size(SmallSpacing))
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_setting),
+                    contentDescription = "Setting",
+                    modifier = Modifier
+                        .size(IconSize)
+                        .padding(ExtraSmallSpacing),
+                    tint = MaterialTheme.colors.onBackground
+                )
+            }
+        }
     }
 
 }
