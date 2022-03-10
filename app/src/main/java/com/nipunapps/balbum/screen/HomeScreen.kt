@@ -32,8 +32,12 @@ import com.nipunapps.balbum.R
 import com.nipunapps.balbum.components.DeleteDialogue
 import com.nipunapps.balbum.core.noRippleClickable
 import com.nipunapps.balbum.models.DirectoryModel
+import com.nipunapps.balbum.ui.Screen
 import com.nipunapps.balbum.ui.theme.*
 import com.nipunapps.balbum.viewmodel.HomeViewModel
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.net.URLEncoder
 
 @Composable
 fun HomeScreen(
@@ -49,6 +53,7 @@ fun HomeScreen(
         mutableStateOf(false)
     }
     BackHandler(enabled = selectionMode) {
+        homeViewModel.toggleAllSelect(false)
         selectionMode = false
     }
     Scaffold(
@@ -75,6 +80,9 @@ fun HomeScreen(
                 },
                 onDeleteClick = {
                     deleteDialogue = true
+                },
+                onShareClick = {
+                    homeViewModel.shareFiles()
                 }
             )
         }
@@ -118,6 +126,12 @@ fun HomeScreen(
                         onItemClick = {
                             if (selectionMode) {
                                 homeViewModel.toggleSelection(index)
+                            } else{
+                                val arg = URLEncoder.encode(
+                                    Json.encodeToString(item),
+                                    "utf-8"
+                                )
+                                navController.navigate(Screen.DetailScreen.route+"/$arg")
                             }
                         },
                         onItemLongClick = {

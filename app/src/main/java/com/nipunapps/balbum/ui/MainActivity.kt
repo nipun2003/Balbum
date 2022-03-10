@@ -18,7 +18,9 @@ import com.google.accompanist.navigation.animation.AnimatedNavHost
 import com.google.accompanist.navigation.animation.composable
 import com.google.accompanist.navigation.animation.rememberAnimatedNavController
 import com.nipunapps.balbum.R
+import com.nipunapps.balbum.core.Constant.DIRECTORY
 import com.nipunapps.balbum.core.showToast
+import com.nipunapps.balbum.screen.DirectoryScreen
 import com.nipunapps.balbum.screen.HomeScreen
 import com.nipunapps.balbum.ui.theme.BAlbumTheme
 import com.nipunapps.balbum.ui.theme.enterAnimation
@@ -54,6 +56,15 @@ class MainActivity : ComponentActivity() {
                             popEnterTransition = { enterAnimation(-300) }
                         ){
                             HomeScreen(navController = navController)
+                        }
+                        composable(
+                            route = Screen.DetailScreen.route+"/{$DIRECTORY}",
+                            exitTransition = { exitAnimation(-300) },
+                            popEnterTransition = { enterAnimation(-300) },
+                            enterTransition = { enterAnimation(300) },
+                            popExitTransition = { exitAnimation(300) }
+                        ){
+                            DirectoryScreen(navController = navController)
                         }
                     }
                 }

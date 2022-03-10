@@ -13,6 +13,9 @@ import com.nipunapps.balbum.ui.theme.MediumSpacing
 
 @Composable
 fun DeleteDialogue(
+    title : Int = R.string.delete_warn,
+    yes : String = "Yes",
+    no : String = "Cancel",
     expand: Boolean = false,
     onYesClick: () -> Unit = {},
     onDismissClick: () -> Unit = {},

@@ -56,6 +56,10 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun shareFiles(){
+        storageRepository.sendMultipleFiles(directoryState.value.filter { it.isSelected })
+    }
+
     fun deleteItems(){
         storageRepository.deleteDirectory(directoryState.value.filter { it.isSelected }).onEach { result->
             when(result){
