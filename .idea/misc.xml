@@ -4,7 +4,13 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="..\:/Android_Project/BAlbum/app/src/main/res/drawable/ic_add.xml" value="0.2385" />
+        <entry key="..\:/Android_Project/BAlbum/app/src/main/res/drawable/ic_check_box.xml" value="0.2385" />
+        <entry key="..\:/Android_Project/BAlbum/app/src/main/res/drawable/ic_check_box_outline.xml" value="0.2385" />
+        <entry key="..\:/Android_Project/BAlbum/app/src/main/res/drawable/ic_delete.xml" value="0.2385" />
+        <entry key="..\:/Android_Project/BAlbum/app/src/main/res/drawable/ic_select.xml" value="0.2385" />
+        <entry key="..\:/Android_Project/BAlbum/app/src/main/res/drawable/ic_select_all.xml" value="0.2385" />
         <entry key="..\:/Android_Project/BAlbum/app/src/main/res/drawable/ic_setting.xml" value="0.2385" />
+        <entry key="..\:/Android_Project/BAlbum/app/src/main/res/drawable/ic_share.xml" value="0.2385" />
       </map>
     </option>
   </component>

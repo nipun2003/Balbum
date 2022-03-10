@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">BAlbum</string>
     <string name="allow_us">Allow us to manage files on your device</string>
+    <string name="delete_warn">The selected item wil be permanently deleted</string>
 </resources>
