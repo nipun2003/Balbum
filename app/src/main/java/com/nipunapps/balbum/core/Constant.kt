@@ -5,5 +5,6 @@ object Constant {
     const val VIDEO = "video"
 
     const val DIRECTORY = "directory"
+    const val INDEX = "index"
     const val ALL_VIDEOS = "/All Videos/"
 }

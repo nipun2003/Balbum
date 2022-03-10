@@ -45,6 +45,10 @@ class DirectoryViewModel @Inject constructor(
         }
     }
 
+    fun updateItems(){
+        _items.value = directoryRepository.getData(directoryModel.value)
+    }
+
     fun toggleSelection(
         index: Int
     ) {
@@ -73,24 +77,23 @@ class DirectoryViewModel @Inject constructor(
         directoryRepository.deleteFiles(
             items.value.filter { it.isSelected }.map { it.path },
             directoryModel.value
-        )
-            .onEach { result ->
-                when (result) {
-                    is Resource.Loading -> {
+        ).onEach { result ->
+            when (result) {
+                is Resource.Loading -> {
 
-                    }
-                    is Resource.Error -> {
-                        _eventFlow.emit(
-                            UIEvent.ShowSnackbar(
-                                result.message ?: "Error deleting file"
-                            )
-                        )
-                    }
-                    is Resource.Success -> {
-                        _items.value = result.data ?: items.value
-                    }
                 }
-            }.launchIn(viewModelScope)
+                is Resource.Error -> {
+                    _eventFlow.emit(
+                        UIEvent.ShowSnackbar(
+                            result.message ?: "Error deleting file"
+                        )
+                    )
+                }
+                is Resource.Success -> {
+                    _items.value = result.data ?: items.value
+                }
+            }
+        }.launchIn(viewModelScope)
     }
 
     fun sendFiles() {

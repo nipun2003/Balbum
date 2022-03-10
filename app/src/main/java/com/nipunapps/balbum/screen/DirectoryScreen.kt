@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,10 +20,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import com.google.accompanist.flowlayout.FlowCrossAxisAlignment
 import com.google.accompanist.flowlayout.FlowRow
@@ -33,9 +38,13 @@ import com.nipunapps.balbum.core.UIEvent
 import com.nipunapps.balbum.core.noRippleClickable
 import com.nipunapps.balbum.core.toTimeFormat
 import com.nipunapps.balbum.models.FileModel
+import com.nipunapps.balbum.ui.Screen
 import com.nipunapps.balbum.ui.theme.*
 import com.nipunapps.balbum.viewmodel.DirectoryViewModel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.net.URLEncoder
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -55,11 +64,26 @@ fun DirectoryScreen(
         directoryViewModel.toggleAllSelect(false)
         selectionMode = false
     }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(
+        key1 = lifecycleOwner,
+        effect = {
+            val observer = LifecycleEventObserver { _, event ->
+                if(event == Lifecycle.Event.ON_RESUME) {
+                    directoryViewModel.updateItems()
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
+        }
+    )
     LaunchedEffect(
         key1 = true,
         block = {
-            directoryViewModel.eventFlow.collectLatest { event->
-                when(event) {
+            directoryViewModel.eventFlow.collectLatest { event ->
+                when (event) {
                     is UIEvent.ShowSnackbar -> {
                         scaffoldState.snackbarHostState.showSnackbar(
                             message = event.message
@@ -96,6 +120,9 @@ fun DirectoryScreen(
                 },
                 onShareClick = {
                     directoryViewModel.sendFiles()
+                },
+                onBackPressed = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -117,31 +144,37 @@ fun DirectoryScreen(
                 }
             )
         }
-        LazyVerticalGrid(
-            modifier = Modifier
-                .fillMaxSize(),
-            cells = GridCells.Fixed(4)
-        ) {
-            items(items.size) { index->
-                val item = items[index]
-                SingleFileComp(
-                    fileModel = item,
-                    selectionMode = selectionMode,
-                    modifier = Modifier
-                        .fillMaxWidth(0.25f)
-                        .aspectRatio(1f),
-                    onItemClick = {
-                        if(selectionMode){
-                            directoryViewModel.toggleSelection(index = index )
+            LazyVerticalGrid(
+                modifier = Modifier
+                    .fillMaxSize(),
+                cells = GridCells.Fixed(4)
+            ) {
+                items(items.size) { index ->
+                    val item = items[index]
+                    SingleFileComp(
+                        fileModel = item,
+                        selectionMode = selectionMode,
+                        modifier = Modifier
+                            .fillMaxWidth(0.25f)
+                            .aspectRatio(1f),
+                        onItemClick = {
+                            if (selectionMode) {
+                                directoryViewModel.toggleSelection(index = index)
+                            }else{
+                                val arg = URLEncoder.encode(
+                                    Json.encodeToString(directoryViewModel.directoryModel.value),
+                                    "utf-8"
+                                )
+                                navController.navigate(Screen.ImageFullScreen.route + "/$arg/$index")
+                            }
+                        },
+                        onItemLongClick = {
+                            directoryViewModel.toggleSelection(index = index)
+                            selectionMode = true
                         }
-                    },
-                    onItemLongClick = {
-                        directoryViewModel.toggleSelection(index = index)
-                        selectionMode = true
-                    }
-                )
+                    )
+                }
             }
-        }
     }
 }
 
@@ -233,6 +266,7 @@ fun DetailTopBar(
     title: String = "",
     selectedItem: Int = 0,
     totalItem: Int = 0,
+    onBackPressed : () -> Unit = {},
     onDeleteClick: () -> Unit = {},
     onShareClick: () -> Unit = {},
     onSelectAllClick: (Boolean) -> Unit = {},
@@ -256,6 +290,16 @@ fun DetailTopBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        modifier = Modifier
+                            .size(IconSize)
+                            .padding(ExtraSmallSpacing)
+                            .noRippleClickable {
+                                onBackPressed()
+                            },
+                    )
                     Text(
                         text = title,
                         style = MaterialTheme.typography.h3,
@@ -323,7 +367,7 @@ fun DetailTopBar(
                                 .size(IconSize)
                                 .padding(ExtraSmallSpacing)
                                 .noRippleClickable {
-                                    if (selectedItem >0) {
+                                    if (selectedItem > 0) {
                                         onShareClick()
                                     }
                                 },

@@ -64,6 +64,10 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun updateItems(){
+        _directoryState.value = storageRepository.getAllDirectory()
+    }
+
     fun getLastImageIndex(): Int {
         directoryState.value.forEachIndexed { index, directoryModel ->
             if (directoryModel.mediaType == Constant.VIDEO) return index

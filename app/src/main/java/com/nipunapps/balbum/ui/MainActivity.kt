@@ -14,14 +14,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.google.accompanist.navigation.animation.AnimatedNavHost
 import com.google.accompanist.navigation.animation.composable
 import com.google.accompanist.navigation.animation.rememberAnimatedNavController
 import com.nipunapps.balbum.R
 import com.nipunapps.balbum.core.Constant.DIRECTORY
+import com.nipunapps.balbum.core.Constant.INDEX
 import com.nipunapps.balbum.core.showToast
 import com.nipunapps.balbum.screen.DirectoryScreen
 import com.nipunapps.balbum.screen.HomeScreen
+import com.nipunapps.balbum.screen.ImageFullScreen
 import com.nipunapps.balbum.ui.theme.BAlbumTheme
 import com.nipunapps.balbum.ui.theme.enterAnimation
 import com.nipunapps.balbum.ui.theme.exitAnimation
@@ -47,24 +51,38 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberAnimatedNavController()
                     AnimatedNavHost(
-                        navController =navController,
+                        navController = navController,
                         startDestination = Screen.HomeScreen.route
-                    ){
+                    ) {
                         composable(
                             route = Screen.HomeScreen.route,
                             exitTransition = { exitAnimation(-300) },
                             popEnterTransition = { enterAnimation(-300) }
-                        ){
+                        ) {
                             HomeScreen(navController = navController)
                         }
                         composable(
-                            route = Screen.DetailScreen.route+"/{$DIRECTORY}",
+                            route = Screen.DetailScreen.route + "/{$DIRECTORY}",
                             exitTransition = { exitAnimation(-300) },
                             popEnterTransition = { enterAnimation(-300) },
                             enterTransition = { enterAnimation(300) },
                             popExitTransition = { exitAnimation(300) }
-                        ){
+                        ) {
                             DirectoryScreen(navController = navController)
+                        }
+                        composable(
+                            route = Screen.ImageFullScreen.route + "/{$DIRECTORY}/{$INDEX}",
+                            arguments = listOf(
+                                navArgument(INDEX) {
+                                    type = NavType.IntType
+                                }
+                            ),
+                            exitTransition = { exitAnimation(-300) },
+                            popEnterTransition = { enterAnimation(-300) },
+                            enterTransition = { enterAnimation(300) },
+                            popExitTransition = { exitAnimation(300) }
+                        ) {
+                            ImageFullScreen(navController)
                         }
                     }
                 }
