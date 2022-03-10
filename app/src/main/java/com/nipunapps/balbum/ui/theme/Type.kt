@@ -28,7 +28,7 @@ val Typography = Typography(
     h1 = TextStyle(
         fontFamily = RobotoFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 35.sp,
+        fontSize = 40.sp,
     ),
     h2 = TextStyle(
         fontFamily = RobotoFamily,

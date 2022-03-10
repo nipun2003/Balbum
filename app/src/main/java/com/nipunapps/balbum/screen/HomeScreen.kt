@@ -6,10 +6,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,11 +27,13 @@ import com.google.accompanist.flowlayout.MainAxisAlignment
 import com.google.accompanist.glide.rememberGlidePainter
 import com.nipunapps.balbum.R
 import com.nipunapps.balbum.components.DeleteDialogue
+import com.nipunapps.balbum.core.UIEvent
 import com.nipunapps.balbum.core.noRippleClickable
 import com.nipunapps.balbum.models.DirectoryModel
 import com.nipunapps.balbum.ui.Screen
 import com.nipunapps.balbum.ui.theme.*
 import com.nipunapps.balbum.viewmodel.HomeViewModel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.net.URLEncoder
@@ -46,6 +45,7 @@ fun HomeScreen(
 ) {
     val directories = homeViewModel.directoryState.value
     val scrollState = rememberScrollState()
+    val scaffoldState = rememberScaffoldState()
     var selectionMode by remember {
         mutableStateOf(false)
     }
@@ -56,7 +56,22 @@ fun HomeScreen(
         homeViewModel.toggleAllSelect(false)
         selectionMode = false
     }
+    LaunchedEffect(
+        key1 = true,
+        block = {
+            homeViewModel.eventFlow.collectLatest { event->
+                when(event) {
+                    is UIEvent.ShowSnackbar -> {
+                        scaffoldState.snackbarHostState.showSnackbar(
+                            message = event.message
+                        )
+                    }
+                }
+            }
+        }
+    )
     Scaffold(
+        scaffoldState = scaffoldState,
         modifier = Modifier
             .fillMaxSize(),
         topBar = {
@@ -109,6 +124,11 @@ fun HomeScreen(
                 .fillMaxWidth()
                 .padding(MediumSpacing)
         ) {
+            Text(
+                text = "Images",
+                style = MaterialTheme.typography.h3
+            )
+            Spacer(modifier = Modifier.size(MediumSpacing))
             FlowRow(
                 modifier = Modifier
                     .fillMaxWidth(),
@@ -117,7 +137,8 @@ fun HomeScreen(
                 crossAxisSpacing = SmallSpacing,
                 mainAxisSpacing = MediumSpacing
             ) {
-                directories.forEachIndexed { index, item ->
+                for (index in 0 until homeViewModel.getLastImageIndex()) {
+                    val item = directories[index]
                     SingleDirectory(
                         directoryModel = item,
                         modifier = Modifier
@@ -126,12 +147,12 @@ fun HomeScreen(
                         onItemClick = {
                             if (selectionMode) {
                                 homeViewModel.toggleSelection(index)
-                            } else{
+                            } else {
                                 val arg = URLEncoder.encode(
                                     Json.encodeToString(item),
                                     "utf-8"
                                 )
-                                navController.navigate(Screen.DetailScreen.route+"/$arg")
+                                navController.navigate(Screen.DetailScreen.route + "/$arg")
                             }
                         },
                         onItemLongClick = {
@@ -141,7 +162,45 @@ fun HomeScreen(
                     )
                 }
             }
-
+            Spacer(modifier = Modifier.size(BigSpacing))
+            Text(
+                text = "Videos",
+                style = MaterialTheme.typography.h3
+            )
+            Spacer(modifier = Modifier.size(MediumSpacing))
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                crossAxisAlignment = FlowCrossAxisAlignment.Start,
+                mainAxisAlignment = MainAxisAlignment.SpaceAround,
+                crossAxisSpacing = SmallSpacing,
+                mainAxisSpacing = MediumSpacing
+            ) {
+                for (index in homeViewModel.getLastImageIndex() until directories.size) {
+                    val item = directories[index]
+                    SingleDirectory(
+                        directoryModel = item,
+                        modifier = Modifier
+                            .fillMaxWidth(0.28f),
+                        selectionMode = selectionMode,
+                        onItemClick = {
+                            if (selectionMode) {
+                                homeViewModel.toggleSelection(index)
+                            } else {
+                                val arg = URLEncoder.encode(
+                                    Json.encodeToString(item),
+                                    "utf-8"
+                                )
+                                navController.navigate(Screen.DetailScreen.route + "/$arg")
+                            }
+                        },
+                        onItemLongClick = {
+                            homeViewModel.toggleSelection(index = index)
+                            selectionMode = true
+                        }
+                    )
+                }
+            }
         }
     }
 }
@@ -248,7 +307,7 @@ fun HomeTopBar(
             Text(
                 text = "Albums",
                 style = MaterialTheme.typography.h1,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.Normal,
                 modifier = Modifier
                     .align(Alignment.TopStart)
             )

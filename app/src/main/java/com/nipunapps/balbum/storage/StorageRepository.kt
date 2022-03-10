@@ -15,26 +15,29 @@ import java.io.File
 
 class StorageRepository(private val context: Context) {
 
-    fun getAllDirectory() : List<DirectoryModel>{
-        return getAllImageDirectory()+getAllVideoDirectory()
+    fun getAllDirectory(): List<DirectoryModel> {
+        return getAllImageDirectory() + getAllVideoDirectory()
     }
 
     fun sendMultipleFiles(list: List<DirectoryModel>) {
         list.forEach { directoryModel ->
             val mediaType = directoryModel.mediaType
-            val datas = getImageVideoInSideDirectory(directoryModel.path,mediaType).map { Uri.parse(it) } as ArrayList<Uri>
-            val mimeType = if(mediaType == Constant.IMAGE) "image/*" else "video/*"
+            val datas = getImageVideoInSideDirectory(
+                directoryModel.path,
+                mediaType
+            ).map { Uri.parse(it) } as ArrayList<Uri>
+            val mimeType = if (mediaType == Constant.IMAGE) "image/*" else "video/*"
             val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-                putExtra(Intent.EXTRA_SUBJECT,"here are some files")
+                putExtra(Intent.EXTRA_SUBJECT, "here are some files")
                 type = mimeType
-                putParcelableArrayListExtra(Intent.EXTRA_STREAM,datas)
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, datas)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             context.startActivity(intent)
         }
     }
 
-    private fun getImageVideoInSideDirectory(path : String,type: String) : ArrayList<String>{
+    private fun getImageVideoInSideDirectory(path: String, type: String): ArrayList<String> {
         val result = arrayListOf<String>()
         val imageUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         val imageProjection = arrayOf(
@@ -46,7 +49,7 @@ class StorageRepository(private val context: Context) {
         val videoUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
         val imageCursor = context.contentResolver.query(imageUri, imageProjection, null, null)
         val videoCursor = context.contentResolver.query(videoUri, videoProjection, null, null)
-        if(type == Constant.IMAGE) {
+        if (type == Constant.IMAGE) {
             imageCursor?.let { cursor ->
                 while (cursor.moveToNext()) {
                     val columnData = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
@@ -57,7 +60,7 @@ class StorageRepository(private val context: Context) {
                     }
                 }
             }
-        }else {
+        } else {
             videoCursor?.let { cursor ->
                 while (cursor.moveToNext()) {
                     val columnData = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
@@ -72,26 +75,29 @@ class StorageRepository(private val context: Context) {
         return result
     }
 
-    fun deleteDirectory(directories : List<DirectoryModel>) : Flow<Resource<List<DirectoryModel>>> = flow {
-        emit(Resource.Loading<List<DirectoryModel>>())
-        try {
-            directories.forEach { directoryModel ->
-                if (directoryModel.mediaType == Constant.IMAGE) {
-                    deleteAllImagesFromDirectory(directoryModel.path)
-                } else deleteAllVideoFromDirectory(directoryModel.path)
+    fun deleteDirectory(directories: List<DirectoryModel>): Flow<Resource<List<DirectoryModel>>> =
+        flow {
+            emit(Resource.Loading<List<DirectoryModel>>())
+            try {
+                directories.forEach { directoryModel ->
+                    if (directoryModel.mediaType == Constant.IMAGE) {
+                        deleteAllImagesFromDirectory(directoryModel.path)
+                    } else deleteAllVideoFromDirectory(directoryModel.path)
+                    emit(
+                        Resource.Success<List<DirectoryModel>>(
+                            data = getAllDirectory()
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("Nipun", e.message.toString())
                 emit(
-                    Resource.Success<List<DirectoryModel>>(
-                        data = getAllDirectory()
+                    Resource.Error<List<DirectoryModel>>(
+                        message = "Something Went wrong on deleting items"
                     )
                 )
             }
-        }catch (e : Exception){
-            Log.e("Nipun",e.message.toString())
-            emit(Resource.Error<List<DirectoryModel>>(
-                message = "Something Went wrong on deleting items"
-            ))
         }
-    }
 
     @SuppressLint("Recycle")
     private fun getAllImageDirectory(): List<DirectoryModel> {
@@ -114,11 +120,11 @@ class StorageRepository(private val context: Context) {
                     firstFilePath = data
                 })
                 val allPhotoIndex = temp.indexOf(DirectoryModel())
-                if(allPhotoIndex != -1){
+                if (allPhotoIndex != -1) {
                     temp[allPhotoIndex] = temp[allPhotoIndex].apply {
                         count += 1
                     }
-                }else temp.add(DirectoryModel().apply {
+                } else temp.add(DirectoryModel().apply {
                     firstFilePath = data
                 })
             }
@@ -127,20 +133,20 @@ class StorageRepository(private val context: Context) {
         return emptyList()
     }
 
-    private suspend fun deleteAllImagesFromDirectory(path : String){
+    private fun deleteAllImagesFromDirectory(path: String) {
         val uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         val projection = arrayOf(
             MediaStore.MediaColumns.DATA, MediaStore.Images.Media.BUCKET_DISPLAY_NAME
         )
         val imageCursor = context.contentResolver.query(uri, projection, null, null)
         imageCursor?.let { cursor ->
-            while (cursor.moveToNext()){
+            while (cursor.moveToNext()) {
                 val columnData = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
                 val data = cursor.getString(columnData)
                 val absPath = data.dropLastWhile { it != '/' }
-                if(absPath == path){
+                if (absPath == path) {
                     val file = File(data)
-                    if(file.exists()){
+                    if (file.exists()) {
                         file.delete()
                     }
                 }
@@ -148,20 +154,20 @@ class StorageRepository(private val context: Context) {
         }
     }
 
-    private suspend fun deleteAllVideoFromDirectory(path : String){
+    private fun deleteAllVideoFromDirectory(path: String) {
         val uri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
         val projection = arrayOf(
             MediaStore.MediaColumns.DATA, MediaStore.Video.Media.BUCKET_DISPLAY_NAME
         )
         val videoCursor = context.contentResolver.query(uri, projection, null, null)
         videoCursor?.let { cursor ->
-            while (cursor.moveToNext()){
+            while (cursor.moveToNext()) {
                 val columnData = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
                 val data = cursor.getString(columnData)
                 val absPath = data.dropLastWhile { it != '/' }
-                if(absPath == path){
+                if (absPath == path) {
                     val file = File(data)
-                    if(file.exists()){
+                    if (file.exists()) {
                         file.delete()
                     }
                 }
@@ -176,7 +182,7 @@ class StorageRepository(private val context: Context) {
         val projection = arrayOf(
             MediaStore.MediaColumns.DATA, MediaStore.Video.Media.BUCKET_DISPLAY_NAME
         )
-        val orderBy = MediaStore.Video.Media.DATE_MODIFIED+ " DESC";
+        val orderBy = MediaStore.Video.Media.DATE_MODIFIED + " DESC";
         val videoCursor = context.contentResolver.query(uri, projection, null, null, orderBy)
         videoCursor?.let { cursor ->
             val temp = arrayListOf<DirectoryModel>()
@@ -184,10 +190,26 @@ class StorageRepository(private val context: Context) {
                 val columnData = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
                 val data = cursor.getString(columnData)
                 val absPath = data.dropLastWhile { it != '/' }
-                val directoryModel = DirectoryModel(absPath,Constant.VIDEO)
+                val directoryModel = DirectoryModel(absPath, Constant.VIDEO)
                 val prevIndex = temp.indexOf(directoryModel)
                 if (prevIndex > -1) temp[prevIndex].count++
                 else temp.add(directoryModel.apply {
+                    firstFilePath = data
+                })
+                val allVideos = temp.indexOf(
+                    DirectoryModel(
+                        path = Constant.ALL_VIDEOS,
+                        mediaType = Constant.VIDEO
+                    )
+                )
+                if (allVideos != -1) {
+                    temp[allVideos] = temp[allVideos].apply {
+                        count += 1
+                    }
+                } else temp.add(DirectoryModel(
+                    path = Constant.ALL_VIDEOS,
+                    mediaType = Constant.VIDEO
+                ).apply {
                     firstFilePath = data
                 })
             }
