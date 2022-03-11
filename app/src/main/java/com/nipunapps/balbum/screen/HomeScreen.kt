@@ -1,6 +1,5 @@
 package com.nipunapps.balbum.screen
 
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -29,7 +28,7 @@ import com.google.accompanist.flowlayout.FlowRow
 import com.google.accompanist.flowlayout.MainAxisAlignment
 import com.google.accompanist.glide.rememberGlidePainter
 import com.nipunapps.balbum.R
-import com.nipunapps.balbum.components.DeleteDialogue
+import com.nipunapps.balbum.components.DeleteComp
 import com.nipunapps.balbum.core.UIEvent
 import com.nipunapps.balbum.core.noRippleClickable
 import com.nipunapps.balbum.models.DirectoryModel
@@ -62,8 +61,8 @@ fun HomeScreen(
     LaunchedEffect(
         key1 = true,
         block = {
-            homeViewModel.eventFlow.collectLatest { event->
-                when(event) {
+            homeViewModel.eventFlow.collectLatest { event ->
+                when (event) {
                     is UIEvent.ShowSnackbar -> {
                         scaffoldState.snackbarHostState.showSnackbar(
                             message = event.message
@@ -78,7 +77,7 @@ fun HomeScreen(
         key1 = lifecycleOwner,
         effect = {
             val observer = LifecycleEventObserver { _, event ->
-                if(event == Lifecycle.Event.ON_RESUME) {
+                if (event == Lifecycle.Event.ON_RESUME) {
                     homeViewModel.updateItems()
                 }
             }
@@ -121,17 +120,15 @@ fun HomeScreen(
         }
     ) {
         if (deleteDialogue) {
-            DeleteDialogue(
-                expand = deleteDialogue,
-                onYesClick = {
-                    homeViewModel.deleteItems()
-                    deleteDialogue = false
+            DeleteComp(
+                file = homeViewModel.deleteItems(),
+                onDeleted = {
+                    homeViewModel.updateItems()
                     selectionMode = false
-                },
-                onDismissClick = {
                     deleteDialogue = false
                 },
-                onDismissRequest = {
+                onDeniedOrFailed = {
+                    selectionMode = false
                     deleteDialogue = false
                 }
             )
@@ -260,7 +257,7 @@ fun SingleDirectory(
                 painter = rememberGlidePainter(
                     directoryModel.firstFilePath
                 ),
-                contentDescription = directoryModel.getName(),
+                contentDescription = directoryModel.getFilterName(),
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(RoundedCornerShape(ExtraSmallSpacing)),
@@ -277,7 +274,7 @@ fun SingleDirectory(
                     contentDescription = "check box",
                     modifier = Modifier
                         .size(IconSize)
-                        .padding(ExtraSmallSpacing)
+                        .padding(SmallSpacing)
                         .align(Alignment.TopEnd)
                         .clip(RoundedCornerShape(ExtraSmallSpacing)),
                     tint = if (directoryModel.isSelected) Color.Blue else MaterialTheme.colors.onBackground
@@ -286,7 +283,7 @@ fun SingleDirectory(
         }
         Spacer(modifier = Modifier.size(BigStroke))
         Text(
-            text = directoryModel.getName(),
+            text = directoryModel.getFilterName(),
             style = MaterialTheme.typography.body1,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -347,7 +344,7 @@ fun HomeTopBar(
                         contentDescription = "Select Mode",
                         modifier = Modifier
                             .size(IconSize)
-                            .padding(ExtraSmallSpacing)
+                            .padding(SmallSpacing)
                             .clickable {
                                 onSelectionModelClick()
                             },
@@ -359,7 +356,7 @@ fun HomeTopBar(
                         contentDescription = "Setting",
                         modifier = Modifier
                             .size(IconSize)
-                            .padding(ExtraSmallSpacing),
+                            .padding(SmallSpacing),
                         tint = MaterialTheme.colors.onBackground
                     )
                 }
@@ -409,7 +406,7 @@ fun HomeTopBar(
                             contentDescription = "Share",
                             modifier = Modifier
                                 .size(IconSize)
-                                .padding(ExtraSmallSpacing)
+                                .padding(SmallSpacing)
                                 .noRippleClickable {
                                     if (selectedItem == 1) {
                                         onShareClick()
@@ -424,7 +421,7 @@ fun HomeTopBar(
                             contentDescription = "Delete",
                             modifier = Modifier
                                 .size(IconSize)
-                                .padding(ExtraSmallSpacing)
+                                .padding(SmallSpacing)
                                 .noRippleClickable {
                                     if (selectedItem > 0) {
                                         onDeleteClick()
@@ -438,7 +435,7 @@ fun HomeTopBar(
                             contentDescription = "Select All",
                             modifier = Modifier
                                 .size(IconSize)
-                                .padding(ExtraSmallSpacing)
+                                .padding(SmallSpacing)
                                 .noRippleClickable {
                                     onSelectAllClick(selectedItem != totalItem)
                                 },

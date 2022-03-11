@@ -1,21 +1,18 @@
 package com.nipunapps.balbum.viewmodel
 
+import android.net.Uri
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.nipunapps.balbum.core.Constant
-import com.nipunapps.balbum.core.Resource
 import com.nipunapps.balbum.core.UIEvent
 import com.nipunapps.balbum.models.DirectoryModel
 import com.nipunapps.balbum.models.FileModel
-import com.nipunapps.balbum.storage.DirectoryRepository
+import com.nipunapps.balbum.repository.DirectoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.net.URLDecoder
@@ -48,6 +45,11 @@ class ImageFullViewModel @Inject constructor(
         }
     }
 
+    fun reloadData() {
+        if (index.value == items.value.size - 1) _index.value = index.value - 1
+        _items.value = directoryRepository.getData(directoryModel.value)
+    }
+
     fun changeIndex(index: Int) {
         _index.value = index
     }
@@ -57,32 +59,13 @@ class ImageFullViewModel @Inject constructor(
         directoryRepository.sendFile(file.path, directoryModel.value.mediaType)
     }
 
-    fun deleteItems() {
-        val file = items.value[index.value]
-        directoryRepository.deleteFiles(
-            listOf(file.path),
-            directoryModel.value
-        )
-            .onEach { result ->
-                when (result) {
-                    is Resource.Loading -> {
-
-                    }
-                    is Resource.Error -> {
-                        _eventFlow.emit(
-                            UIEvent.ShowSnackbar(
-                                result.message ?: "Error deleting file"
-                            )
-                        )
-                    }
-                    is Resource.Success -> {
-                        _items.value = result.data ?: items.value
-                    }
-                }
-            }.launchIn(viewModelScope)
+    fun deleteItems(): List<Uri> {
+        val item = index.value
+        val file = items.value[item]
+        return listOf(file.getMediaUri(directoryModel.value.mediaType))
     }
 
-    fun playVideo(){
+    fun playVideo() {
         val path = items.value[index.value].path
         directoryRepository.playVideo(path = path)
     }

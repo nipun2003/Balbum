@@ -1,9 +1,13 @@
 package com.nipunapps.balbum.screen
 
+import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
@@ -13,6 +17,9 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -27,17 +34,21 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.rememberPagerState
 import com.nipunapps.balbum.R
-import com.nipunapps.balbum.components.DeleteDialogue
+import com.nipunapps.balbum.components.DeleteComp
 import com.nipunapps.balbum.core.Constant.IMAGE
 import com.nipunapps.balbum.core.noRippleClickable
 import com.nipunapps.balbum.models.FileModel
+import com.nipunapps.balbum.ui.Screen
 import com.nipunapps.balbum.ui.theme.*
 import com.nipunapps.balbum.viewmodel.ImageFullViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
-@OptIn(ExperimentalPagerApi::class, androidx.compose.material.ExperimentalMaterialApi::class)
+@OptIn(ExperimentalPagerApi::class, ExperimentalMaterialApi::class)
 @Composable
 fun ImageFullScreen(
     navController: NavController,
@@ -57,6 +68,17 @@ fun ImageFullScreen(
     var showEditors by remember {
         mutableStateOf(true)
     }
+    var rotate by remember {
+        mutableStateOf(0f)
+    }
+    val angle by animateFloatAsState(targetValue = rotate)
+    val items = imageFullViewModel.items.value
+    var editEnable by remember {
+        mutableStateOf(false)
+    }
+    BackHandler(enabled = editEnable) {
+        editEnable = false
+    }
     LaunchedEffect(
         key1 = pagerState,
     ) {
@@ -64,7 +86,6 @@ fun ImageFullScreen(
             imageFullViewModel.changeIndex(page)
         }
     }
-    val items = imageFullViewModel.items.value
     BottomSheetScaffold(
         modifier = Modifier
             .fillMaxSize(),
@@ -75,88 +96,132 @@ fun ImageFullScreen(
                 modifier = Modifier
                     .fillMaxWidth()
             )
-
         },
         sheetPeekHeight = 0.dp
     ) {
-        if (deleteDialogue) {
-            DeleteDialogue(
-                expand = deleteDialogue,
-                onYesClick = {
-                    imageFullViewModel.deleteItems()
-                    deleteDialogue = false
-                },
-                onDismissClick = {
-                    deleteDialogue = false
-                },
-                onDismissRequest = {
-                    deleteDialogue = false
-                }
-            )
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-        ) {
-            HorizontalPager(
-                count = items.size,
-                state = pagerState,
+        if (items.isEmpty()) {
+            navController.popBackStack()
+        } else {
+            if (deleteDialogue) {
+                DeleteComp(file = imageFullViewModel.deleteItems(),
+                    onDeleted = {
+                        deleteDialogue = false
+                        if (items.size == 1) {
+                            navController.navigate(
+                                Screen.HomeScreen.route
+                            ) {
+                                popUpTo(Screen.HomeScreen.route) {
+                                    inclusive = true
+                                }
+                            }
+                        } else {
+                            imageFullViewModel.reloadData()
+                        }
+                    },
+                    onDeniedOrFailed = {
+                        deleteDialogue = false
+                    })
+            }
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-            ) { index ->
-                val item = items[index]
-                SinglePager(
-                    fileModel = item,
+            ) {
+                HorizontalPager(
+                    count = items.size,
+                    state = pagerState,
                     modifier = Modifier
                         .fillMaxSize(),
-                    mediaType = imageFullViewModel.directoryModel.value.mediaType,
-                    onPlayClick = {
-                        imageFullViewModel.playVideo()
-                    }
-                ) {
-                    coroutineScope.launch {
-                        scaffoldState.bottomSheetState.collapse()
-                        showEditors = !showEditors
-                    }
-                }
-            }
-            if (showEditors) {
-                TopEditor(
-                    selectedIndex = selectedIndex,
-                    totalItem = items.size,
-                    modifier = Modifier
-                        .zIndex(10f)
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth()
-                        .height(IntrinsicSize.Min)
-                        .padding(horizontal = BigSpacing),
-                    onBackPress = {
-                        navController.popBackStack()
-                    }
-                ) {
-                    coroutineScope.launch {
-                        if (scaffoldState.bottomSheetState.isCollapsed) {
-                            scaffoldState.bottomSheetState.expand()
-                        } else {
+                    userScrollEnabled = !editEnable,
+                ) { index ->
+                    val item = items[index]
+                    SinglePager(
+                        fileModel = item,
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        angle = angle,
+                        mediaType = imageFullViewModel.directoryModel.value.mediaType,
+                        onPlayClick = {
+                            imageFullViewModel.playVideo()
+                        },
+                        onDrag = { isNext ->
+                            coroutineScope.launch {
+                                when {
+                                    isNext < 10f && index != items.size - 1 -> {
+                                        pagerState.animateScrollToPage(
+                                            page = index + 1,
+                                        )
+                                    }
+                                    isNext > -10f && index != 0 -> {
+                                        pagerState.animateScrollToPage(
+                                            page = index - 1,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    ) {
+                        coroutineScope.launch {
                             scaffoldState.bottomSheetState.collapse()
+                            showEditors = !showEditors
                         }
                     }
                 }
-
-                BottomEditor(
-                    modifier = Modifier
-                        .zIndex(10f)
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .height(IntrinsicSize.Min)
-                        .padding(horizontal = BigSpacing),
-                    onDeleteClick = {
-                        deleteDialogue = true
-                    },
-                    onShareClick = {
-                        imageFullViewModel.sendFile()
+                if (showEditors) {
+                    TopEditor(
+                        selectedIndex = selectedIndex,
+                        totalItem = items.size,
+                        modifier = Modifier
+                            .zIndex(10f)
+                            .background(color = MaterialTheme.colors.background)
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min)
+                            .padding(horizontal = BigSpacing),
+                        onBackPress = {
+                            navController.popBackStack()
+                        }
+                    ) {
+                        coroutineScope.launch {
+                            if (scaffoldState.bottomSheetState.isCollapsed) {
+                                scaffoldState.bottomSheetState.expand()
+                            } else {
+                                scaffoldState.bottomSheetState.collapse()
+                            }
+                        }
                     }
-                )
+
+                    BottomEditor(
+                        modifier = Modifier
+                            .zIndex(10f)
+                            .background(color = MaterialTheme.colors.background)
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min)
+                            .padding(horizontal = BigSpacing),
+                        showBack = selectedIndex != 0,
+                        showNext = selectedIndex != items.size - 1,
+                        onDeleteClick = {
+                            deleteDialogue = true
+                        },
+                        onShareClick = {
+                            imageFullViewModel.sendFile()
+                        },
+                        onPrevClick = {
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(
+                                    page = pagerState.currentPage - 1
+                                )
+                            }
+                        },
+                        onNextClick = {
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(
+                                    page = pagerState.currentPage + 1
+                                )
+                            }
+                        }
+                    )
+                }
             }
         }
     }
@@ -165,11 +230,14 @@ fun ImageFullScreen(
 @Composable
 fun BottomEditor(
     modifier: Modifier = Modifier,
+    showBack: Boolean = false,
+    showNext: Boolean = false,
+    onPrevClick: () -> Unit,
+    onNextClick: () -> Unit,
     onShareClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
     Column(modifier = modifier) {
-        Spacer(modifier = Modifier.size(PaddingStatusBar))
         Row(
             modifier = Modifier
                 .fillMaxWidth(),
@@ -177,11 +245,27 @@ fun BottomEditor(
             horizontalArrangement = Arrangement.Center
         ) {
             Icon(
+                painter = painterResource(id = R.drawable.ic_next),
+                contentDescription = "Share",
+                modifier = Modifier
+                    .size(IconSize)
+                    .rotate(180f)
+                    .padding(SmallSpacing)
+                    .noRippleClickable {
+                        if (showBack) {
+                            onPrevClick()
+                        }
+                    },
+                tint = if(showBack) MaterialTheme.colors.onBackground else Color.Gray.copy(alpha = 0.67f)
+            )
+            Spacer(modifier = Modifier.size(MediumSpacing))
+
+            Icon(
                 painter = painterResource(id = R.drawable.ic_share),
                 contentDescription = "Share",
                 modifier = Modifier
                     .size(IconSize)
-                    .padding(ExtraSmallSpacing)
+                    .padding(SmallSpacing)
                     .noRippleClickable {
                         onShareClick()
                     }
@@ -192,13 +276,27 @@ fun BottomEditor(
                 contentDescription = "Delete",
                 modifier = Modifier
                     .size(IconSize)
-                    .padding(ExtraSmallSpacing)
+                    .padding(SmallSpacing)
                     .noRippleClickable {
                         onDeleteClick()
                     }
             )
+            Icon(
+                painter = painterResource(id = R.drawable.ic_next),
+                contentDescription = "Share",
+                modifier = Modifier
+                    .size(IconSize)
+                    .padding(SmallSpacing)
+                    .noRippleClickable {
+                        if (showNext)
+                            onNextClick()
+                    },
+                tint = if(showNext) MaterialTheme.colors.onBackground else Color.Gray.copy(alpha = 0.67f)
+            )
+            Spacer(modifier = Modifier.size(MediumSpacing))
+
         }
-        Spacer(modifier = Modifier.size(PaddingStatusBar))
+        Spacer(modifier = Modifier.size(SmallSpacing))
     }
 }
 
@@ -224,7 +322,7 @@ fun TopEditor(
                     contentDescription = "Back",
                     modifier = Modifier
                         .size(IconSize)
-                        .padding(ExtraSmallSpacing)
+                        .padding(SmallSpacing)
                         .noRippleClickable {
                             onBackPress()
                         },
@@ -234,16 +332,18 @@ fun TopEditor(
                     style = MaterialTheme.typography.body1
                 )
             }
-            Icon(
-                imageVector = Icons.Default.Info,
-                contentDescription = "Info",
-                modifier = Modifier
-                    .size(IconSize)
-                    .padding(ExtraSmallSpacing)
-                    .noRippleClickable {
-                        onInfoClick()
-                    }
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Info",
+                    modifier = Modifier
+                        .size(IconSize)
+                        .padding(SmallSpacing)
+                        .noRippleClickable {
+                            onInfoClick()
+                        }
+                )
+            }
         }
         Spacer(modifier = Modifier.size(PaddingStatusBar))
     }
@@ -254,11 +354,13 @@ fun SinglePager(
     modifier: Modifier = Modifier,
     fileModel: FileModel,
     mediaType: String,
-    onPlayClick : () -> Unit,
+    angle: Float,
+    onDrag: (Float) -> Unit,
+    onPlayClick: () -> Unit,
     onBoxClick: () -> Unit
 ) {
     val scale = remember { mutableStateOf(1f) }
-    val rotationState = remember { mutableStateOf(0f) }
+    val rotationState = remember { mutableStateOf(angle) }
     var offsetX by remember { mutableStateOf(0f) }
     var offsetY by remember { mutableStateOf(0f) }
     val animateScale = animateFloatAsState(targetValue = scale.value)
@@ -268,32 +370,25 @@ fun SinglePager(
     }
     Box(
         modifier = modifier
+            .noRippleClickable {
+                onBoxClick()
+            }
             .pointerInput(Unit) {
-                if (mediaType == IMAGE) {
-                    detectTapGestures(
-                        onTap = {
-                            onBoxClick()
-                        },
-                        onDoubleTap = {
-                            if (zoom == 0) {
-                                offsetX = 0f
-                                offsetY = 0f
-                                scale.value = 1f
-                                rotationState.value = 0f
-                                zoom = 2
-                            } else {
-                                offsetX = 0f
-                                offsetY = 0f
-                                scale.value *= 2
-                                rotationState.value = 0f
-                                zoom -= 1
-                            }
-                        }
-                    )
-                }
+                detectTapGestures(onDoubleTap = {
+                    if (zoom == 0) {
+                        scale.value = 1f
+                        rotationState.value = 0f
+                        offsetX = 0f
+                        offsetY = 0f
+                        zoom = 2
+                    } else {
+                        scale.value *= 2f
+                        zoom--
+                    }
+                })
             }
     ) {
-        if(mediaType == IMAGE) {
+        if (mediaType == IMAGE) {
             Image(
                 painter = rememberGlidePainter(
                     fileModel.path
@@ -301,14 +396,33 @@ fun SinglePager(
                 contentDescription = fileModel.name,
                 modifier = Modifier
                     .align(Alignment.Center)
+                    .rotate(rotationState.value)
                     .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
-                    .graphicsLayer(
+                    .scale(
                         scaleX = maxOf(.5f, minOf(100f, animateScale.value)),
                         scaleY = maxOf(.5f, minOf(100f, animateScale.value)),
-                        rotationZ = rotationState.value
-                    ),
+                    )
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, rotation ->
+                            scale.value *= zoom
+                            rotationState.value += rotation
+                            val x = pan.x * zoom
+                            val y = pan.y * zoom
+                            val angleRad = angle * PI / 180.0
+                            if (scale.value != 1.0f) {
+                                offsetX += (x * cos(angleRad) - y * sin(angleRad)).toFloat()
+                                offsetY += (x * sin(angleRad) + y * cos(angleRad)).toFloat()
+                            } else {
+                                if (zoom in 0.97..1.0) {
+                                    onDrag(
+                                        pan.x
+                                    )
+                                }
+                            }
+                        }
+                    },
             )
-        }else {
+        } else {
             Image(
                 painter = rememberGlidePainter(
                     fileModel.path
@@ -324,11 +438,11 @@ fun SinglePager(
             )
             Icon(
                 painter = painterResource(id = R.drawable.ic_play),
-                contentDescription ="Play",
+                contentDescription = "Play",
                 modifier = Modifier
                     .align(Alignment.Center)
                     .size(50.dp)
-                    .padding(ExtraSmallSpacing)
+                    .padding(SmallSpacing)
                     .clickable {
                         onPlayClick()
                     }

@@ -5,7 +5,6 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.GridCells
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
@@ -22,18 +21,15 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
-import com.google.accompanist.flowlayout.FlowCrossAxisAlignment
-import com.google.accompanist.flowlayout.FlowRow
-import com.google.accompanist.flowlayout.MainAxisAlignment
 import com.google.accompanist.glide.rememberGlidePainter
 import com.nipunapps.balbum.R
-import com.nipunapps.balbum.components.DeleteDialogue
+import com.nipunapps.balbum.components.DeleteComp
 import com.nipunapps.balbum.core.UIEvent
 import com.nipunapps.balbum.core.noRippleClickable
 import com.nipunapps.balbum.core.toTimeFormat
@@ -69,7 +65,7 @@ fun DirectoryScreen(
         key1 = lifecycleOwner,
         effect = {
             val observer = LifecycleEventObserver { _, event ->
-                if(event == Lifecycle.Event.ON_RESUME) {
+                if (event == Lifecycle.Event.ON_RESUME) {
                     directoryViewModel.updateItems()
                 }
             }
@@ -104,7 +100,7 @@ fun DirectoryScreen(
                 selectionMode = selectionMode,
                 selectedItem = items.count { it.isSelected },
                 totalItem = items.size,
-                title = directoryViewModel.directoryModel.value.getName(),
+                title = directoryViewModel.directoryModel.value.getFilterName(),
                 onSelectionModelClick = {
                     selectionMode = true
                 },
@@ -128,53 +124,60 @@ fun DirectoryScreen(
         }
     ) {
         if (deleteDialogue) {
-            DeleteDialogue(
-                expand = deleteDialogue,
-                onYesClick = {
-                    directoryViewModel.deleteItems()
-                    directoryViewModel.toggleAllSelect(false)
+            DeleteComp(
+                file = directoryViewModel.deleteItems(),
+                onDeleted = {
                     deleteDialogue = false
                     selectionMode = false
+                    if (items.size == 1) {
+                        navController.navigate(
+                            Screen.HomeScreen.route
+                        ) {
+                            popUpTo(Screen.HomeScreen.route) {
+                                inclusive = true
+                            }
+                        }
+                    } else {
+                        directoryViewModel.updateItems()
+                    }
                 },
-                onDismissClick = {
-                    deleteDialogue = false
-                },
-                onDismissRequest = {
+                onDeniedOrFailed = {
+                    selectionMode = false
                     deleteDialogue = false
                 }
             )
         }
-            LazyVerticalGrid(
-                modifier = Modifier
-                    .fillMaxSize(),
-                cells = GridCells.Fixed(4)
-            ) {
-                items(items.size) { index ->
-                    val item = items[index]
-                    SingleFileComp(
-                        fileModel = item,
-                        selectionMode = selectionMode,
-                        modifier = Modifier
-                            .fillMaxWidth(0.25f)
-                            .aspectRatio(1f),
-                        onItemClick = {
-                            if (selectionMode) {
-                                directoryViewModel.toggleSelection(index = index)
-                            }else{
-                                val arg = URLEncoder.encode(
-                                    Json.encodeToString(directoryViewModel.directoryModel.value),
-                                    "utf-8"
-                                )
-                                navController.navigate(Screen.ImageFullScreen.route + "/$arg/$index")
-                            }
-                        },
-                        onItemLongClick = {
+        LazyVerticalGrid(
+            modifier = Modifier
+                .fillMaxSize(),
+            cells = GridCells.Fixed(4)
+        ) {
+            items(items.size) { index ->
+                val item = items[index]
+                SingleFileComp(
+                    fileModel = item,
+                    selectionMode = selectionMode,
+                    modifier = Modifier
+                        .fillMaxWidth(0.25f)
+                        .aspectRatio(1f),
+                    onItemClick = {
+                        if (selectionMode) {
                             directoryViewModel.toggleSelection(index = index)
-                            selectionMode = true
+                        } else {
+                            val arg = URLEncoder.encode(
+                                Json.encodeToString(directoryViewModel.directoryModel.value),
+                                "utf-8"
+                            )
+                            navController.navigate(Screen.ImageFullScreen.route + "/$arg/$index")
                         }
-                    )
-                }
+                    },
+                    onItemLongClick = {
+                        directoryViewModel.toggleSelection(index = index)
+                        selectionMode = true
+                    }
+                )
             }
+        }
     }
 }
 
@@ -249,7 +252,7 @@ fun SingleFileComp(
                     contentDescription = "check box",
                     modifier = Modifier
                         .size(IconSize)
-                        .padding(ExtraSmallSpacing)
+                        .padding(SmallSpacing)
                         .align(Alignment.TopEnd)
                         .clip(RoundedCornerShape(ExtraSmallSpacing)),
                     tint = if (fileModel.isSelected) Color.Blue else MaterialTheme.colors.onBackground
@@ -266,7 +269,7 @@ fun DetailTopBar(
     title: String = "",
     selectedItem: Int = 0,
     totalItem: Int = 0,
-    onBackPressed : () -> Unit = {},
+    onBackPressed: () -> Unit = {},
     onDeleteClick: () -> Unit = {},
     onShareClick: () -> Unit = {},
     onSelectAllClick: (Boolean) -> Unit = {},
@@ -285,17 +288,17 @@ fun DetailTopBar(
         ) {
             if (!selectionMode) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxSize(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    modifier = Modifier
+                        .fillMaxWidth(0.7f)
+                        .align(Alignment.CenterStart)
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
                         contentDescription = "Back",
                         modifier = Modifier
                             .size(IconSize)
-                            .padding(ExtraSmallSpacing)
+                            .padding(SmallSpacing)
                             .noRippleClickable {
                                 onBackPressed()
                             },
@@ -303,30 +306,32 @@ fun DetailTopBar(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.h3,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    Row(
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(0.3f)
+                        .align(Alignment.CenterEnd)
+                        .padding(
+                            bottom = ExtraSmallSpacing,
+                            end = ExtraSmallSpacing
+                        ),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_select_mode),
+                        contentDescription = "Select Mode",
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(4.2f)
-                            .padding(
-                                bottom = ExtraSmallSpacing,
-                                end = ExtraSmallSpacing
-                            ),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_select_mode),
-                            contentDescription = "Select Mode",
-                            modifier = Modifier
-                                .size(IconSize)
-                                .padding(ExtraSmallSpacing)
-                                .clickable {
-                                    onSelectionModelClick()
-                                },
-                            tint = MaterialTheme.colors.onBackground
-                        )
-                    }
+                            .size(IconSize)
+                            .padding(SmallSpacing)
+                            .clickable {
+                                onSelectionModelClick()
+                            },
+                        tint = MaterialTheme.colors.onBackground
+                    )
                 }
             } else {
                 Row(
@@ -365,7 +370,7 @@ fun DetailTopBar(
                             contentDescription = "Share",
                             modifier = Modifier
                                 .size(IconSize)
-                                .padding(ExtraSmallSpacing)
+                                .padding(SmallSpacing)
                                 .noRippleClickable {
                                     if (selectedItem > 0) {
                                         onShareClick()
@@ -380,7 +385,7 @@ fun DetailTopBar(
                             contentDescription = "Delete",
                             modifier = Modifier
                                 .size(IconSize)
-                                .padding(ExtraSmallSpacing)
+                                .padding(SmallSpacing)
                                 .noRippleClickable {
                                     if (selectedItem > 0) {
                                         onDeleteClick()
@@ -394,7 +399,7 @@ fun DetailTopBar(
                             contentDescription = "Select All",
                             modifier = Modifier
                                 .size(IconSize)
-                                .padding(ExtraSmallSpacing)
+                                .padding(SmallSpacing)
                                 .noRippleClickable {
                                     onSelectAllClick(selectedItem != totalItem)
                                 },

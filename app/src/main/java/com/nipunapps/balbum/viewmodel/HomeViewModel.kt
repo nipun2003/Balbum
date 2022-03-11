@@ -1,20 +1,17 @@
 package com.nipunapps.balbum.viewmodel
 
-import android.util.Log
+import android.net.Uri
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nipunapps.balbum.core.Constant
-import com.nipunapps.balbum.core.Resource
 import com.nipunapps.balbum.core.UIEvent
 import com.nipunapps.balbum.models.DirectoryModel
-import com.nipunapps.balbum.storage.StorageRepository
+import com.nipunapps.balbum.repository.StorageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -39,7 +36,7 @@ class HomeViewModel @Inject constructor(
         _directoryState.value = list.mapIndexed { i, directoryModel ->
             if (i == index) {
                 directoryModel.copy(
-                    path = directoryModel.path,
+                    name = directoryModel.name,
                     isSelected = !directoryModel.isSelected,
                     mediaType = directoryModel.mediaType
                 ).apply {
@@ -54,7 +51,7 @@ class HomeViewModel @Inject constructor(
         val list = directoryState.value
         _directoryState.value = list.map { directoryModel ->
             directoryModel.copy(
-                path = directoryModel.path,
+                name = directoryModel.name,
                 isSelected = value,
                 mediaType = directoryModel.mediaType
             ).apply {
@@ -64,7 +61,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun updateItems(){
+    fun updateItems() {
         _directoryState.value = storageRepository.getAllDirectory()
     }
 
@@ -90,24 +87,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun deleteItems() {
-        storageRepository.deleteDirectory(directoryState.value.filter { it.isSelected })
-            .onEach { result ->
-                when (result) {
-                    is Resource.Loading -> {
-
-                    }
-                    is Resource.Error -> {
-                        _eventFlow.emit(
-                            UIEvent.ShowSnackbar(
-                                result.message ?: "Error deleting file"
-                            )
-                        )
-                    }
-                    is Resource.Success -> {
-                        _directoryState.value = result.data ?: directoryState.value
-                    }
-                }
-            }.launchIn(viewModelScope)
+    fun deleteItems(): List<Uri> {
+        return storageRepository.deleteDirectory(directoryState.value.filter { it.isSelected })
     }
 }

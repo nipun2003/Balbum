@@ -1,21 +1,19 @@
 package com.nipunapps.balbum.viewmodel
 
+import android.net.Uri
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nipunapps.balbum.core.Constant
-import com.nipunapps.balbum.core.Resource
 import com.nipunapps.balbum.core.UIEvent
 import com.nipunapps.balbum.models.DirectoryModel
 import com.nipunapps.balbum.models.FileModel
-import com.nipunapps.balbum.storage.DirectoryRepository
+import com.nipunapps.balbum.repository.DirectoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -45,7 +43,7 @@ class DirectoryViewModel @Inject constructor(
         }
     }
 
-    fun updateItems(){
+    fun updateItems() {
         _items.value = directoryRepository.getData(directoryModel.value)
     }
 
@@ -73,27 +71,8 @@ class DirectoryViewModel @Inject constructor(
         }
     }
 
-    fun deleteItems() {
-        directoryRepository.deleteFiles(
-            items.value.filter { it.isSelected }.map { it.path },
-            directoryModel.value
-        ).onEach { result ->
-            when (result) {
-                is Resource.Loading -> {
-
-                }
-                is Resource.Error -> {
-                    _eventFlow.emit(
-                        UIEvent.ShowSnackbar(
-                            result.message ?: "Error deleting file"
-                        )
-                    )
-                }
-                is Resource.Success -> {
-                    _items.value = result.data ?: items.value
-                }
-            }
-        }.launchIn(viewModelScope)
+    fun deleteItems(): List<Uri> {
+        return items.value.filter { it.isSelected }.map { it.getMediaUri(directoryModel.value.mediaType) }
     }
 
     fun sendFiles() {

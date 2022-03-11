@@ -1,8 +1,8 @@
 package com.nipunapps.balbum
 
 import android.content.Context
-import com.nipunapps.balbum.storage.DirectoryRepository
-import com.nipunapps.balbum.storage.StorageRepository
+import com.nipunapps.balbum.repository.DirectoryRepository
+import com.nipunapps.balbum.repository.StorageRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

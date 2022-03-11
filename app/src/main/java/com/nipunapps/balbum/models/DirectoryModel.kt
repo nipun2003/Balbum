@@ -8,15 +8,15 @@ import kotlinx.serialization.Serializable
 @Parcelize
 @Serializable
 data class DirectoryModel(
-    val path : String = "/All Photos/",
-    val mediaType : String = IMAGE,
-    val isSelected : Boolean = false
+    val name : String = "",
+    val mediaType : String = "",
+    val bucketId : String = "",
+    val isSelected : Boolean = false,
 ) : Parcelable {
-    private val name : String = path.dropLast(1).takeLastWhile { it != '/' }
     var count = 1
     var firstFilePath = ""
 
-    fun getName() : String {
-        return if(name == "0") "Phone Storage" else name
+    fun getFilterName() : String {
+        return name
     }
 }
